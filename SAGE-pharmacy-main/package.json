@@ -1,0 +1,21 @@
+{
+  "name": "pharmacy-hasimbola",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/acf-patrick/pharmacy-hasimbola",
+  "author": "acf-patrick <miharisoap@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "scripts": {
+    "build_client": "cd frontend && yarn build && cd ..",
+    "build_server": "cd backend && yarn build && cd ..",
+    "build": "yarn build_client && yarn build_server",
+    "postbuild": "mkdir -p backend/client && cp -r frontend/dist/* backend/client && cd backend && npx prisma migrate deploy && npx prisma db seed",
+    "dev": "concurrently \"cd backend && yarn start:dev\" \"cd frontend && yarn dev --host\" \"cd backend && npx prisma studio\"",
+    "start": "cd backend && yarn start:prod",
+    "postinstall": "cd frontend && yarn && cd ../backend && yarn",
+    "deploy": "git checkout preview && git merge main && git push origin HEAD && git checkout main"
+  }
+}

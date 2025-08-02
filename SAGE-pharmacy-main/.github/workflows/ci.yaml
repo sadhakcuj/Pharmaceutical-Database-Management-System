@@ -1,0 +1,72 @@
+name: publish
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: setup env variables
+        run: |
+          echo "DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/${{ secrets.POSTGRES_DB }}?schema=public&pool_timeout=0" >> docker.env
+          echo "PRODUCTION=true" >> docker.env
+          cp docker.env backend/rust-service/
+          echo "ACCESS_SECRET=${{ vars.ACCESS_SECRET }}" >> docker.env
+          echo "REFRESH_SECRET=${{ vars.REFRESH_SECRET }}" >> docker.env
+          echo "RUST_API_PORT=${{ vars.RUST_API_PORT }}" >> docker.env
+          echo "MAILER_HOST=${{ vars.MAILER_HOST }}" >> docker.env
+          echo "MAILER_USER=${{ vars.MAILER_USER }}" >> docker.env
+          echo "MAILER_PASSWORD=${{ vars.MAILER_PASSWORD }}" >> docker.env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> docker.env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> docker.env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> docker.env
+          echo "VITE_API_ENDPOINT=http://${{ vars.HOST }}/api" >> docker.env
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-compose
+          path: |
+            docker.env
+            docker-compose.yaml
+
+      - name: log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: build and push Docker image
+        run: |
+          docker-compose build
+          docker-compose push
+
+  publish:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: clear app directory
+        run: |
+          touch foo
+          rm -r *
+
+      - name: download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-compose
+
+      - name: pull and run Docker image
+        run: |
+          sudo docker compose down
+          sudo docker image prune -f
+          sudo docker compose pull
+          sudo docker compose up -d

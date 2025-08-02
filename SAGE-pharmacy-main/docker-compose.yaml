@@ -1,0 +1,43 @@
+version: '3'
+services:
+  rust-api:
+    image: acfpatrick/rust-service-sage-pharmacy:latest
+    restart: always
+    build:
+      context: ./backend/rust-service
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+  server:
+    image: acfpatrick/sage-pharmacy:latest
+    restart: always
+    build:
+      context: .
+    ports:
+      - '80:3000'
+    depends_on:
+      rust-api:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+  postgres:
+    image: postgres:latest
+    restart: unless-stopped
+    container_name: postgres
+    env_file:
+      - docker.env
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres:

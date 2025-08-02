@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  ORDERED
+  PENDING
+  RECEIVED
+  FINISHED
+  AVOIR
+  ARCHIVED
+}
+
+enum UserRole {
+  ADMIN
+  NORMAL
+}
+
+model User {
+  id       String   @id @default(uuid())
+  username String   @unique
+  password String
+  role     UserRole @default(NORMAL)
+}
+
+model Medicine {
+  id                    String                 @id @default(uuid())
+  name                  String
+  sellingPrice          Int
+  costPrice             Int
+  quantity              Int // Stock à terme
+  real                  Int // Stock réel
+  nomenclature          String?
+  location              String
+  dci                   String?
+  type                  String                 @default("Standard")
+  family                String
+  isTaxed               Boolean                @default(true)
+  min                   Int
+  alert                 Int // Stock d'alerte
+  max                   Int
+  reference             String                 @unique
+  expirationDate        DateTime?              @db.Date
+  manufacturationDate   DateTime?              @db.Date
+  medicineFromProviders MedicineFromProvider[]
+}
+
+model MedicineFromProvider {
+  id                String          @id @default(uuid())
+  name              String
+  priceWithTax      Int
+  priceWithoutTax   Int
+  quantity          Int
+  dci               String?
+  Provider          Provider        @relation(fields: [providerId], references: [id])
+  providerId        String
+  expirationDate    DateTime        @db.Date
+  OrderMedicine     OrderMedicine[]
+  matchingMedicines Medicine[]
+}
+
+model Provider {
+  id                  String                 @id @default(uuid())
+  accountNumber       String
+  abridgment          String
+  commonAccountNumber String
+  address             String
+  complementAdress    String?
+  postalCode          Int?
+  city                String
+  country             String
+  telephone           String[]
+  telecopie           String?
+  email               String?
+  contactName         String?
+  rc                  String?
+  stat                String?
+  nif                 String?
+  cif                 String?
+  collector           String
+  name                String                 @unique
+  medicines           MedicineFromProvider[]
+  min                 Int? // Minimal value of purchase
+  minQuantity         Int? // Minimal value of quantity to make order valid
+  Order               Order[]
+}
+
+model OrderMedicine {
+  id                     String               @id @default(uuid())
+  medicine               MedicineFromProvider @relation(fields: [medicineFromProviderId], references: [id], onDelete: Cascade)
+  quantity               Int
+  medicineFromProviderId String
+  Order                  Order                @relation(fields: [orderId], references: [id])
+  orderId                String
+}
+
+model Order {
+  id             String          @id @default(uuid())
+  provider       Provider        @relation(fields: [providerName], references: [name])
+  providerName   String
+  createdAt      DateTime        @default(now())
+  status         OrderStatus     @default(ORDERED)
+  medicineOrders OrderMedicine[]
+  receipts       Receipt[]
+}
+
+model Receipt {
+  id              String         @id @default(uuid())
+  filename        String
+  Order           Order?         @relation(fields: [orderId], references: [id])
+  orderId         String?
+  archivedOrderId String?
+  ArchivedOrder   ArchivedOrder? @relation(fields: [archivedOrderId], references: [id])
+}
+
+model ArchivedOrder {
+  id                String    @id @default(uuid())
+  createdAt         DateTime  @default(now())
+  providerName      String
+  orderCreationDate DateTime
+  receipts          Receipt[]
+}

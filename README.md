@@ -41,11 +41,6 @@ SQL client tools (e.g., pgAdmin, phpMyAdmin, or MySQL shell)
 Setup Instructions
 Clone the Repository
 
-bash
-git clone https://github.com/sadhakcuj/Pharmaceutical-Database-Management-System.git
-cd Pharmaceutical-Database-Management-System
-Database Initialization
-
 Create a new database (e.g., pharmacy).
 
 Schema Deployment
